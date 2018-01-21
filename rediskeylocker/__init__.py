@@ -2,4 +2,4 @@
 
 from __future__ import absolute_import
 
-from .rediskeylocker import *
+from .rediskeylocker import RedisKeyLocker
