@@ -14,7 +14,7 @@ class RedisKeyLocker(object):
 															end
 															""")
 
-	def lock(self, key, px, block=True):
+	def acquire(self, key, px, block=True):
 		'''SET resource_name my_random_value NX PX 30000'''
 		lockId = RedisKeyLocker._randomid()
 
@@ -30,7 +30,7 @@ class RedisKeyLocker(object):
 			else:
 				return None
 
-	def unlock(self, key, lockId):
+	def release(self, key, lockId):
 		self._unlockFunc(keys=[key], args=[lockId])
 
 	@staticmethod
@@ -47,35 +47,35 @@ class _Key(object):
 		self.px = px
 		self.lockId = None
 
-	def lock(self):
-		self.lockId = self.owner.lock(self.key, self.px)
+	def acquire(self):
+		self.lockId = self.owner.acquire(self.key, self.px)
 
-	def unlock(self):
+	def release(self):
 		if self.lockId:
-			self.owner.unlock(self.key, self.lockId)
+			self.owner.release(self.key, self.lockId)
 			self.lockId = None
 
-	__enter__ = lock
+	__enter__ = acquire
 
 	def __exit__(self, exc_type, exc_val, exc_tb):
-		self.unlock()
+		self.release()
 
 if __name__ == '__main__':
 	import redis
 	rlm = RedisKeyLocker(redis.StrictRedis())
-	lock_id = rlm.lock("abc", 1000)
+	lock_id = rlm.acquire("abc", 1000)
 	print 'locked', lock_id
-	rlm.unlock("abc", lock_id)
+	rlm.release("abc", lock_id)
 	print 'unlocked', lock_id
 
-	lock_id = rlm.lock("abc", 1000)
+	lock_id = rlm.acquire("abc", 1000)
 	print 'locked', lock_id
-	lock_id = rlm.lock("abc", 1000)
+	lock_id = rlm.acquire("abc", 1000)
 	print 'locked', lock_id
-	rlm.unlock("abc", lock_id)
+	rlm.release("abc", lock_id)
 	print 'unlocked', lock_id
 
-	lock_id = rlm.lock("abc", 1000)
+	lock_id = rlm.acquire("abc", 1000)
 	print 'locked', lock_id
-	rlm.unlock("abc", lock_id)
+	rlm.release("abc", lock_id)
 	print 'unlocked', lock_id
